@@ -1,16 +1,15 @@
-from fastapi import FastAPI, File, UploadFile, Form , Depends, HTTPException , Header , Request , APIRouter , Body
+# app.py
+from fastapi import FastAPI, File, UploadFile, Form, Depends, HTTPException, Header, Request, APIRouter, Body
 from backend.models.user_model import UserSchema
-from backend.database import users_collection , interviews_collection
+from backend.database import users_collection, interviews_collection
 from datetime import datetime
 from pydantic import BaseModel
-from backend.auth import hash_password, verify_password, create_access_token, SECRET_KEY, ALGORITHM , get_current_user
-from pymongo.errors import DuplicateKeyError
+from backend.auth import get_current_user, get_current_user_full
 from fastapi.middleware.cors import CORSMiddleware
 from backend.interview_session import InterviewSession
 from backend.resume_parser import parse_resume_with_llm
 from backend.coding_session import CodingSession
 from backend.speech_to_text import transcribe
-from jose import jwt, JWTError
 from langchain_ollama import OllamaLLM  
 from uuid import uuid4
 from backend.interview_session import InterviewSession
@@ -19,11 +18,9 @@ from typing import Optional
 from bson import ObjectId
 from backend.routes import dashboard
 
-
 import json
 import numpy as np
 from backend.hr_session import HRInterviewSession
-from backend.auth import get_current_user
 from backend.routes.user import router as user_router
 
 from langchain_core.prompts import PromptTemplate
@@ -37,7 +34,8 @@ user_sessions = {}
 router = APIRouter()
 app.include_router(user_router)
 app.include_router(dashboard.router)
-# CORS setup so frontend can call backend
+
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -46,17 +44,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class UserAuth(BaseModel):
-    email: str
-    password: str
-
 class CodeSubmission(BaseModel):
     code: str
-
-
-
-
-
 
 
 @app.post("/api/setup")
@@ -68,15 +57,15 @@ def setup_session(
 ):
     session_id = str(uuid4())
 
-    # 🔁 Load parsed resume text from DB
-    user_data = users_collection.find_one({"email": user})
+    # Load parsed resume text from DB using clerkId
+    user_data = users_collection.find_one({"clerkId": user})
     if not user_data:
         raise HTTPException(status_code=404, detail="User not found")
 
     resume = {
-        "name": user_data.get("name"),
-        "email": user_data.get("email"),
-        "phone": user_data.get("phone"),
+        "name": user_data.get("name", ""),
+        "email": user_data.get("email", ""),
+        "phone": user_data.get("phone", ""),
         "skills": user_data.get("skills", []),
         "projects": user_data.get("projects", []),
         "experience": user_data.get("experience", [])
@@ -84,15 +73,13 @@ def setup_session(
 
     # Convert to structured text
     resume_text = "\n".join([
-    f"Name: {resume.get('name')}",
-    f"Email: {resume.get('email')}",
-    f"Phone: {resume.get('phone')}",
-    "Skills: " + ", ".join(resume.get('skills', [])),
-    "Projects: " + ", ".join(resume.get("projects", [])),  # no .get() here
-    "Experience: " + ", ".join(resume.get("experience", []))  # no .get() here
-])
-
-
+        f"Name: {resume.get('name')}",
+        f"Email: {resume.get('email')}",
+        f"Phone: {resume.get('phone')}",
+        "Skills: " + ", ".join(resume.get('skills', [])),
+        "Projects: " + ", ".join(resume.get("projects", [])),
+        "Experience: " + ", ".join(resume.get("experience", []))
+    ])
 
     if interview_type == "full":
         session_data = {
@@ -100,10 +87,10 @@ def setup_session(
             "tech": InterviewSession(role=role, resume_obj=resume_text, rounds=2, session_id=session_id),
             "hr": HRInterviewSession(role=role, rounds=2, session_id=session_id + "_hr"),
             "current": "tech",
-            "role":role
+            "role": role
         }
 
-        # ⛔ Skip coding round for frontend roles
+        # Skip coding round for frontend roles
         if role.lower() != "frontend developer":
             session_data["code"] = CodingSession(role=role, rounds=3)
 
@@ -120,38 +107,8 @@ def setup_session(
     return {"session_id": session_id}
 
 
-
-@app.post("/api/signup")
-def signup(user: UserAuth):
-    existing_user = users_collection.find_one({"email": user.email})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User already exists")
-
-    hashed_pw = hash_password(user.password)
-
-    users_collection.insert_one({
-        "email": user.email,
-        "password": hashed_pw,
-        "createdAt": datetime.utcnow()
-    })
-
-    return {"msg": "User registered successfully"}
-
-
-@app.post("/api/login")
-def login(user: UserAuth):
-    db_user = users_collection.find_one({"email": user.email})
-    if not db_user or not verify_password(user.password, db_user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    token = create_access_token({"sub": user.email})
-    return {"access_token": token}
-
 @app.post("/api/parse-resume")
 async def parse_resume_endpoint(resume: UploadFile = File(...), user: str = Depends(get_current_user)):
-    import tempfile
-    from resume_parser import parse_resume_with_llm
-
     # Save resume to temp file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         contents = await resume.read()
@@ -166,15 +123,6 @@ async def parse_resume_endpoint(resume: UploadFile = File(...), user: str = Depe
     return result
 
 
-
-# Global interview session (you can make this per-user later)
-'''session = InterviewSession(
-    resume_path="Rahul_Resume_provisional__parsed.json",
-    role="Software Development Engineer",
-    rounds=1
-)
-'''
-import os
 @app.post("/api/audio")
 async def handle_audio(audio: UploadFile = File(...), focus_score: Optional[float] = Form(1.0), user: str = Depends(get_current_user)):
     session_info = user_sessions.get(user)
@@ -191,6 +139,7 @@ async def handle_audio(audio: UploadFile = File(...), focus_score: Optional[floa
     answer = transcribe(tmp_path)
     confidence = get_confidence_score(tmp_path)
     os.remove(tmp_path)
+
     # Get the current session object
     if isinstance(session_info, dict):
         session = session_info.get(session_info.get("current"))
@@ -210,18 +159,15 @@ async def handle_audio(audio: UploadFile = File(...), focus_score: Optional[floa
         current_round = session_info["current"]
         session = session_info[current_round]
 
-        
         # First-time greeting
         if not session.history and not session.meta.get("greeting_sent"):
             session.meta["greeting_sent"] = True
 
-            # If user already spoke something (i.e., this is not just ping for first question)
             if answer.strip():
                 session.provide_answer(answer)
                 next_q = session.ask_question()
                 return {"text": next_q, "answer": answer, "confidence": confidence}
             
-            # Otherwise, greet first
             first_question = session.ask_question()
             return {"text": first_question, "answer": "", "confidence": confidence}
 
@@ -235,15 +181,14 @@ async def handle_audio(audio: UploadFile = File(...), focus_score: Optional[floa
             # Switch rounds
             if current_round == "tech":
                 if "frontend" in session_info["role"].lower():
-
                     session_info["current"] = "hr"
-                    return {"text": "Awesome. Now let’s start the behavioral (HR) round.", "answer": answer, "confidence": confidence}
+                    return {"text": "Awesome. Now let's start the behavioral (HR) round.", "answer": answer, "confidence": confidence}
 
                 session_info["current"] = "code"
-                return {"text": "Okay! Now let’s move to the live coding round.", "answer": answer, "confidence": confidence}
+                return {"text": "Okay! Now let's move to the live coding round.", "answer": answer, "confidence": confidence}
             elif current_round == "code":
                 session_info["current"] = "hr"
-                return {"text": "Okay. Now let’s start the behavioral (HR) round. Tell me about your Strengths and Weaknesses?", "answer": answer, "confidence": confidence}
+                return {"text": "Okay. Now let's start the behavioral (HR) round. Tell me about your Strengths and Weaknesses?", "answer": answer, "confidence": confidence}
             else:
                 return {"text": "The interview is complete. Thank you!", "answer": answer, "confidence": confidence}
 
@@ -251,22 +196,17 @@ async def handle_audio(audio: UploadFile = File(...), focus_score: Optional[floa
     else:
         session = session_info
 
-        # First-time greeting
-        
         if not session.history and not session.meta.get("greeting_sent"):
             session.meta["greeting_sent"] = True
 
-            # If user already spoke something (i.e., this is not just ping for first question)
             if answer.strip():
                 session.provide_answer(answer)
                 next_q = session.ask_question()
                 return {"text": next_q, "answer": answer, "confidence": confidence}
             
-            # Otherwise, greet first
             first_question = session.ask_question()
             return {"text": first_question, "answer": "", "confidence": confidence}
 
-        # Process answer
         session.provide_answer(answer)
         next_q = session.ask_question()
 
@@ -275,9 +215,6 @@ async def handle_audio(audio: UploadFile = File(...), focus_score: Optional[floa
         else:
             return {"text": "The interview is complete. Thank you!", "answer": answer, "confidence": confidence}
 
-
-
-from datetime import datetime
 
 @app.get("/api/feedback")
 def get_feedback(user: str = Depends(get_current_user)):
@@ -289,7 +226,6 @@ def get_feedback(user: str = Depends(get_current_user)):
     feedback_data = {}
     transcript_data = ""
 
-    # Get current session for flag tracking
     session = session_info if not isinstance(session_info, dict) else session_info.get(session_info["current"])
     if not hasattr(session, "meta") or session.meta is None:
         session.meta = {}
@@ -311,7 +247,6 @@ def get_feedback(user: str = Depends(get_current_user)):
             f"Q: {q['question']}\nA: {q['answer']}"
             for q in session_info["tech"].history + session_info["hr"].history
         ])
-
 
     else:
         summary = session.generate_feedback()
@@ -335,10 +270,10 @@ def get_feedback(user: str = Depends(get_current_user)):
         avg_conf = float(np.mean(session.meta.get("confidence_scores", [])))
         avg_focus = float(np.mean(session.meta.get("focus_scores", [])))
 
-    # ✅ PREVENT DUPLICATE SAVES
+    # PREVENT DUPLICATE SAVES
     if not session.meta.get("feedback_saved"):
         interviews_collection.insert_one({
-            "userId": user,
+            "userId": user,  # This is now clerkId
             "role": session_info["tech"].role if isinstance(session_info, dict) else session.role,
             "date": datetime.now().isoformat(),
             "mode": session_info["mode"] if isinstance(session_info, dict) else getattr(session_info, "round_type", "custom"),
@@ -347,7 +282,7 @@ def get_feedback(user: str = Depends(get_current_user)):
             "average_confidence": avg_conf,
             "average_focus": avg_focus
         })
-        session.meta["feedback_saved"] = True  # 🟢 Mark as saved
+        session.meta["feedback_saved"] = True
     else:
         print("🛑 Feedback already saved. Skipping DB insert.")
 
@@ -358,23 +293,18 @@ def get_feedback(user: str = Depends(get_current_user)):
     }
 
 
-
-
 @app.get("/api/coding-problem")
 def get_coding_problem(user: str = Depends(get_current_user)):
     session_info = user_sessions.get(user)
 
     if not session_info:
         raise HTTPException(status_code=404, detail="No active session found.")
-    
 
     # Full interview mode
     if isinstance(session_info, dict) and session_info.get("mode") == "full":
-        # ❌ prevent accessing coding round too early
         if session_info.get("current") != "code":
             raise HTTPException(status_code=400, detail="Not in coding round yet.")
 
-        # ✅ lazy init if not already created
         if "code" not in session_info:
             session_info["code"] = CodingSession(role=session_info["tech"].role, rounds=3)
 
@@ -385,17 +315,12 @@ def get_coding_problem(user: str = Depends(get_current_user)):
 
     else:
         raise HTTPException(status_code=400, detail="No coding session active.")
-    print("Coding round index:", session.current_round, "/", session.rounds)
 
     problem = session.get_next_problem()
     if not problem:
         raise HTTPException(status_code=204, detail="No more coding problems.")
 
     return problem
-
-
-
-
 
 
 @app.post("/api/submit-code")
@@ -411,12 +336,10 @@ async def submit_code(request: Request, user: str = Depends(get_current_user)):
         session = session_info.get("code")
         session.submit_solution(code)
 
-        # Fetch next problem
         next_problem = session.get_next_problem()
         if next_problem:
-            return { "next": True, "problem": next_problem }
+            return {"next": True, "problem": next_problem}
 
-        # No more problems, switch to HR
         session_info["current"] = "hr"
         return {
             "next": False,
@@ -425,19 +348,15 @@ async def submit_code(request: Request, user: str = Depends(get_current_user)):
 
     elif isinstance(session_info, CodingSession):
         session_info.submit_solution(code)
-        return { "next": False, "message": "Thanks for your submission." }
+        return {"next": False, "message": "Thanks for your submission."}
 
     else:
         raise HTTPException(status_code=400, detail="Invalid coding session")
 
 
-def get_average(scores: list[float]) -> float:
-    if not scores:
-        return 0.0
-    return round(sum(scores) / len(scores), 2)
-
 from langchain_core.prompts import ChatPromptTemplate
 from backend.llm_groq_config import code_llm
+
 @app.post("/api/code-explanation")
 async def handle_code_explanation(audio: UploadFile = File(...), user: str = Depends(get_current_user)):
     session_info = user_sessions.get(user)
@@ -445,7 +364,6 @@ async def handle_code_explanation(audio: UploadFile = File(...), user: str = Dep
     if not session_info:
         raise HTTPException(status_code=404, detail="No session")
 
-    # 🎯 Get CodingSession
     if isinstance(session_info, dict) and session_info.get("mode") == "full":
         session = session_info.get("code")
     elif isinstance(session_info, CodingSession):
@@ -453,7 +371,6 @@ async def handle_code_explanation(audio: UploadFile = File(...), user: str = Dep
     else:
         raise HTTPException(status_code=400, detail="Not in coding session")
 
-    # 🎤 Save and transcribe audio
     contents = await audio.read()
     tmp_path = f"temp_explain_{uuid4().hex}.wav"
     with open(tmp_path, "wb") as f:
@@ -462,7 +379,6 @@ async def handle_code_explanation(audio: UploadFile = File(...), user: str = Dep
     user_text = transcribe(tmp_path)
     os.remove(tmp_path)
 
-    # 🧠 Use LLM to respond to explanation
     session.explanation_history.append({"user": user_text})
 
     from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
@@ -473,7 +389,6 @@ async def handle_code_explanation(audio: UploadFile = File(...), user: str = Dep
         HumanMessage(content="Code:\n" + session.history[-1]["code"]),
     ]
 
-    # Add chat history
     for msg in session.explanation_history:
         if "user" in msg:
             messages.append(HumanMessage(content=msg["user"]))
@@ -482,9 +397,6 @@ async def handle_code_explanation(audio: UploadFile = File(...), user: str = Dep
 
     response = code_llm.invoke(messages).content
 
-
-
-    # 💾 Save AI response back to explanation history
     session.explanation_history.append({"ai": response})
 
     return {
@@ -497,15 +409,16 @@ async def handle_code_explanation(audio: UploadFile = File(...), user: str = Dep
 def get_user_interviews(user: str = Depends(get_current_user)):
     interviews = list(interviews_collection.find({"userId": user}))
     for i in interviews:
-        i["_id"] = str(i["_id"])  # Convert ObjectId to string for frontend
+        i["_id"] = str(i["_id"])
     return interviews
+
 
 @app.get("/api/interviews/{interview_id}")
 def get_interview(interview_id: str, user: str = Depends(get_current_user)):
     interview = interviews_collection.find_one({"_id": ObjectId(interview_id), "userId": user})
     if not interview:
         raise HTTPException(status_code=404, detail="Interview not found")
-    interview["_id"] = str(interview["_id"])  # convert ObjectId to string
+    interview["_id"] = str(interview["_id"])
     return interview
 
 
@@ -516,13 +429,14 @@ def get_history(user: str = Depends(get_current_user)):
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if isinstance(session, dict):  # full session (tech + hr + coding)
+    if isinstance(session, dict):
         current_round = session.get(session['current'])
         history = current_round.history if current_round else []
     else:
         history = session.history
 
     return {"history": history}
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
