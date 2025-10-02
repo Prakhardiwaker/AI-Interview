@@ -22,7 +22,7 @@ def get_dashboard_stats(user: str = Depends(get_current_user)) -> Dict[str, Any]
     """
     
     # Get all interviews for this user (user is now clerkId)
-    all_interviews = list(interviews_collection.find({"userId": user}))
+    all_interviews = list(interviews_collection.find({"clerkId": user}))
     
     # Calculate total interviews
     total_interviews = len(all_interviews)
