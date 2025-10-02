@@ -2,26 +2,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from backend.auth import get_current_user, get_current_user_full
 from backend.database import users_collection
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
+from datetime import datetime
 
 router = APIRouter(prefix="/api/user", tags=["user"])
-
-class EducationItem(BaseModel):
-    degree: str
-    institution: str
-    year: str
-
-class ExperienceItem(BaseModel):
-    title: str
-    company: str
-    duration: str
-    description: str
-
-class ProjectItem(BaseModel):
-    title: str
-    tech: List[str]
-    description: str
 
 class UserProfileUpdate(BaseModel):
     name: Optional[str] = None
@@ -29,10 +14,13 @@ class UserProfileUpdate(BaseModel):
     linkedin: Optional[str] = None
     github: Optional[str] = None
     role: Optional[str] = None
+    college: Optional[str] = None
+    degree: Optional[str] = None
+    graduationYear: Optional[str] = None
+    areasOfInterest: Optional[List[str]] = None
     skills: Optional[List[str]] = None
-    education: Optional[List[EducationItem]] = None
-    experience: Optional[List[ExperienceItem]] = None
-    projects: Optional[List[ProjectItem]] = None
+    targetCompanies: Optional[List[str]] = None
+    preferredInterviewTypes: Optional[List[str]] = None
     groq_api_key: Optional[str] = None
 
 
@@ -55,6 +43,10 @@ def update_profile(
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
     
+    # Add timestamp for profile completion
+    update_data["updatedAt"] = datetime.utcnow()
+    update_data["profileCompleted"] = True
+    
     # Update user in database
     result = users_collection.update_one(
         {"clerkId": user},
@@ -73,7 +65,7 @@ def update_profile(
 
 @router.delete("/profile")
 def delete_profile(user: str = Depends(get_current_user)):
-    """Delete user profile (soft delete - just marks as deleted)"""
+    """Delete user profile (soft delete - marks as deleted)"""
     result = users_collection.update_one(
         {"clerkId": user},
         {"$set": {"deleted": True, "deletedAt": datetime.utcnow()}}
@@ -83,3 +75,23 @@ def delete_profile(user: str = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="User not found")
     
     return {"message": "Profile deleted successfully"}
+
+
+@router.get("/check-profile")
+def check_profile_completion(user: str = Depends(get_current_user)):
+    """Check if user has completed their profile"""
+    user_data = users_collection.find_one({"clerkId": user})
+    
+    if not user_data:
+        return {"profileCompleted": False}
+    
+    # Check if essential fields are filled
+    essential_fields = ["name", "college", "degree", "graduationYear", "role"]
+    profile_completed = all(user_data.get(field) for field in essential_fields)
+    
+    return {
+        "profileCompleted": profile_completed,
+        "hasName": bool(user_data.get("name")),
+        "hasEducation": bool(user_data.get("college") and user_data.get("degree")),
+        "hasRole": bool(user_data.get("role"))
+    }

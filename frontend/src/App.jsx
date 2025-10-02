@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ClerkProvider } from "@clerk/clerk-react";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
-import { ProtectedRoute } from "./components/common/ProtectedRoute";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 import { Navbar } from "./components/layout/Navbar";
 import { ROUTES } from "./lib/constants";
 
@@ -10,9 +10,10 @@ import { ROUTES } from "./lib/constants";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Interviews from "./pages/Interviews";
-import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import ProfilePage from "./pages/ProfilePage";
+import MyProfile from "./pages/MyProfile";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -47,19 +48,28 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
-                  <Route
-                    path={ROUTES.PROFILE}
-                    element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    }
-                  />
+
                   <Route
                     path={ROUTES.SETTINGS}
                     element={
                       <ProtectedRoute>
                         <Settings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path={ROUTES.PROFILE}
+                    element={
+                      <ProtectedRoute>
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path={ROUTES.MYPROFILE}
+                    element={
+                      <ProtectedRoute>
+                        <MyProfile />
                       </ProtectedRoute>
                     }
                   />

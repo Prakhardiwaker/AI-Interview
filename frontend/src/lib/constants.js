@@ -12,6 +12,7 @@ export const ROUTES = {
   INTERVIEW_SESSION: "/interviews/:id/session",
   RESULTS: "/interviews/:id/results",
   PROFILE: "/profile",
+  MYPROFILE: "/MyProfile",
   SETTINGS: "/settings",
 };
 

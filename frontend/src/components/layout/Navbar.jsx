@@ -17,6 +17,7 @@ export const Navbar = ({ onMenuClick }) => {
   const navLinks = [
     { name: "Dashboard", path: ROUTES.DASHBOARD },
     { name: "Interviews", path: ROUTES.INTERVIEWS },
+    { name: "My Profile", path: ROUTES.MYPROFILE },
   ];
 
   return (
@@ -72,7 +73,8 @@ export const Navbar = ({ onMenuClick }) => {
 
           <SignedIn>
             <UserButton
-              afterSignOutUrl="/"
+              userProfileMode="navigation" // ✅ optional: can use Clerk profile menu
+              userProfileUrl={ROUTES.PROFILE}
               appearance={{
                 elements: {
                   avatarBox: "h-9 w-9",

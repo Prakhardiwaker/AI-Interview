@@ -25,6 +25,38 @@ export const setClerkHeaders = (user) => {
   }
 };
 
+// User Profile APIs
+export const getUserProfile = async (user) => {
+  const response = await axios.get(`${API_BASE_URL}/api/user/profile`, {
+    headers: {
+      "X-User-Id": user.id,
+      "X-User-Email": user.emailAddresses[0]?.emailAddress,
+    },
+  });
+  return response.data;
+};
+
+export const updateUserProfile = async (user, data) => {
+  const response = await axios.put(`${API_BASE_URL}/api/user/profile`, data, {
+    headers: {
+      "Content-Type": "application/json",
+      "X-User-Id": user.id,
+      "X-User-Email": user.emailAddresses[0]?.emailAddress,
+    },
+  });
+  return response.data;
+};
+
+export const checkProfileCompletion = async (user) => {
+  const response = await axios.get(`${API_BASE_URL}/api/user/check-profile`, {
+    headers: {
+      "X-User-Id": user.id,
+      "X-User-Email": user.emailAddresses[0]?.emailAddress,
+    },
+  });
+  return response.data;
+};
+
 // Interview APIs
 export const setupInterview = async (data) => {
   const formData = new FormData();
@@ -102,17 +134,6 @@ export const getInterview = async (interviewId) => {
 
 export const getHistory = async () => {
   const response = await api.get("/api/history");
-  return response.data;
-};
-
-// User APIs
-export const getUserProfile = async () => {
-  const response = await api.get("/api/user/profile");
-  return response.data;
-};
-
-export const updateUserProfile = async (data) => {
-  const response = await api.put("/api/user/profile", data);
   return response.data;
 };
 
