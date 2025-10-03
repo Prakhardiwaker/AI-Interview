@@ -1,60 +1,153 @@
-import { getUserProfile, getDashboardStats, getInterviewHistory } from "../lib/api";
+import {
+  getUserProfile,
+  getDashboardStats,
+  getInterviewHistory,
+} from "../lib/api";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react"; 
+import { useEffect, useState } from "react";
 import { useApi } from "../hooks/useApi";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Award, Code, Calendar, Target, CheckCircle, AlertCircle, Eye, Bell, User, Briefcase, FolderKanban, Brain } from 'lucide-react';
-
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  TrendingUp,
+  Award,
+  Code,
+  Calendar,
+  Target,
+  CheckCircle,
+  AlertCircle,
+  Eye,
+  Bell,
+  User,
+  Briefcase,
+  FolderKanban,
+  Brain,
+} from "lucide-react";
 
 // Mock Data
 const statsData = {
   totalInterviews: 24,
   avgConfidence: 78,
   codingAccuracy: 85,
-  lastActive: 'Sep 28, 2025'
+  lastActive: "Sep 28, 2025",
 };
 
 const confidenceTrend = [
-  { date: 'Week 1', score: 65 },
-  { date: 'Week 2', score: 70 },
-  { date: 'Week 3', score: 72 },
-  { date: 'Week 4', score: 75 },
-  { date: 'Week 5', score: 78 },
-  { date: 'Week 6', score: 82 }
+  { date: "Week 1", score: 65 },
+  { date: "Week 2", score: 70 },
+  { date: "Week 3", score: 72 },
+  { date: "Week 4", score: 75 },
+  { date: "Week 5", score: 78 },
+  { date: "Week 6", score: 82 },
 ];
 
 const performanceData = [
-  { category: 'Technical', score: 82 },
-  { category: 'HR', score: 88 },
-  { category: 'Coding', score: 85 }
+  { category: "Technical", score: 82 },
+  { category: "HR", score: 88 },
+  { category: "Coding", score: 85 },
 ];
 
 const codingInsights = [
-  { name: 'Solved', value: 145 },
-  { name: 'Attempted', value: 35 }
+  { name: "Solved", value: 145 },
+  { name: "Attempted", value: 35 },
 ];
 
 const interviewHistory = [
-  { id: 1, date: 'Sep 28, 2025', role: 'Senior Frontend Developer', mode: 'Full', score: 85, status: 'Completed' },
-  { id: 2, date: 'Sep 25, 2025', role: 'React Developer', mode: 'Technical', score: 78, status: 'Completed' },
-  { id: 3, date: 'Sep 22, 2025', role: 'Software Engineer', mode: 'Coding', score: 92, status: 'Completed' },
-  { id: 4, date: 'Sep 20, 2025', role: 'Full Stack Developer', mode: 'HR', score: 88, status: 'Completed' },
-  { id: 5, date: 'Sep 18, 2025', role: 'Backend Developer', mode: 'Technical', score: 75, status: 'Completed' },
-  { id: 6, date: 'Sep 15, 2025', role: 'DevOps Engineer', mode: 'Full', score: 80, status: 'Completed' }
+  {
+    id: 1,
+    date: "Sep 28, 2025",
+    role: "Senior Frontend Developer",
+    mode: "Full",
+    score: 85,
+    status: "Completed",
+  },
+  {
+    id: 2,
+    date: "Sep 25, 2025",
+    role: "React Developer",
+    mode: "Technical",
+    score: 78,
+    status: "Completed",
+  },
+  {
+    id: 3,
+    date: "Sep 22, 2025",
+    role: "Software Engineer",
+    mode: "Coding",
+    score: 92,
+    status: "Completed",
+  },
+  {
+    id: 4,
+    date: "Sep 20, 2025",
+    role: "Full Stack Developer",
+    mode: "HR",
+    score: 88,
+    status: "Completed",
+  },
+  {
+    id: 5,
+    date: "Sep 18, 2025",
+    role: "Backend Developer",
+    mode: "Technical",
+    score: 75,
+    status: "Completed",
+  },
+  {
+    id: 6,
+    date: "Sep 15, 2025",
+    role: "DevOps Engineer",
+    mode: "Full",
+    score: 80,
+    status: "Completed",
+  },
 ];
 
 const commonMistakes = [
-  'Time complexity analysis needs improvement',
-  'Edge case handling in coding problems',
-  'Communication clarity during explanations',
-  'Nervous body language in initial responses'
+  "Time complexity analysis needs improvement",
+  "Edge case handling in coding problems",
+  "Communication clarity during explanations",
+  "Nervous body language in initial responses",
 ];
 
 const notifications = [
-  { id: 1, type: 'achievement', message: 'You completed 3 interviews this week!', icon: Award },
-  { id: 2, type: 'update', message: 'New JavaScript challenges available.', icon: Code },
-  { id: 3, type: 'tip', message: 'Try practicing system design questions.', icon: Target },
-  { id: 4, type: 'achievement', message: 'Streak of 5 days maintained!', icon: TrendingUp }
+  {
+    id: 1,
+    type: "achievement",
+    message: "You completed 3 interviews this week!",
+    icon: Award,
+  },
+  {
+    id: 2,
+    type: "update",
+    message: "New JavaScript challenges available.",
+    icon: Code,
+  },
+  {
+    id: 3,
+    type: "tip",
+    message: "Try practicing system design questions.",
+    icon: Target,
+  },
+  {
+    id: 4,
+    type: "achievement",
+    message: "Streak of 5 days maintained!",
+    icon: TrendingUp,
+  },
 ];
 
 const strengths = [
@@ -74,18 +167,25 @@ const COLORS = ["#9333ea", "#e9d5ff"];
 
 // Reusable StatCard component
 const StatCard = ({ icon: Icon, title, value, subtitle, color }) => (
-  <div className="bg-white rounded-xl p-5 border border-gray-100 hover:shadow-md transition-all duration-200">
+  <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 hover:shadow-md dark:hover:shadow-gray-900/50 transition-all duration-200">
     <div className="flex items-center gap-3 mb-2">
       <div className={`p-2 rounded-lg ${color}`}>
         <Icon className="w-5 h-5 text-white" />
       </div>
-      <p className="text-sm text-gray-600 font-medium">{title}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+        {title}
+      </p>
     </div>
-    <p className="text-2xl font-bold text-gray-900 ml-11">{value}</p>
-    {subtitle && <p className="text-xs text-gray-500 mt-1 ml-11">{subtitle}</p>}
+    <p className="text-2xl font-bold text-gray-900 dark:text-white ml-11">
+      {value}
+    </p>
+    {subtitle && (
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-11">
+        {subtitle}
+      </p>
+    )}
   </div>
 );
-
 
 export default function Dashboard() {
   const { user, isLoaded } = useApi();
@@ -119,7 +219,6 @@ export default function Dashboard() {
     fetchData();
   }, [user, isLoaded]);
 
-
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -136,13 +235,11 @@ export default function Dashboard() {
     );
   }
 
-
- return (
-    <div className="min-h-screen bg-gray-50">
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-8 py-6">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 px-8 py-6">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-          
           <button className="px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm shadow-sm">
             Start New Interview
           </button>
@@ -157,19 +254,28 @@ export default function Dashboard() {
             {/* Left Side - User Info */}
             <div className="flex items-center gap-6">
               <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center text-purple-600 text-3xl font-bold shadow-xl">
-                {Profile.name.split(' ').map(n => n[0]).join('')}
+                {Profile.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white mb-1">{Profile.name}</h2>
+                <h2 className="text-2xl font-bold text-white mb-1">
+                  {Profile.name}
+                </h2>
                 <p className="text-purple-100 mb-3">{Profile.email}</p>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1.5">
                     <Briefcase className="w-4 h-4 text-white" />
-                    <span className="text-sm text-white font-medium">{Profile.experience} Experience</span>
+                    <span className="text-sm text-white font-medium">
+                      {Profile.experience} Experience
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1.5">
                     <FolderKanban className="w-4 h-4 text-white" />
-                    <span className="text-sm text-white font-medium">{Profile.projects} Projects</span>
+                    <span className="text-sm text-white font-medium">
+                      {Profile.projects} Projects
+                    </span>
                   </div>
                 </div>
               </div>
@@ -180,33 +286,50 @@ export default function Dashboard() {
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                 <div className="flex items-center gap-2 mb-2">
                   <Target className="w-5 h-5 text-white" />
-                  <p className="text-xs text-purple-100 font-medium">Interviews</p>
+                  <p className="text-xs text-purple-100 font-medium">
+                    Interviews
+                  </p>
                 </div>
-                <p className="text-3xl font-bold text-white">{statsData.totalInterviews}</p>
+                <p className="text-3xl font-bold text-white">
+                  {statsData.totalInterviews}
+                </p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="w-5 h-5 text-white" />
-                  <p className="text-xs text-purple-100 font-medium">Confidence</p>
+                  <p className="text-xs text-purple-100 font-medium">
+                    Confidence
+                  </p>
                 </div>
-                <p className="text-3xl font-bold text-white">{statsData.avgConfidence}%</p>
+                <p className="text-3xl font-bold text-white">
+                  {statsData.avgConfidence}%
+                </p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                 <div className="flex items-center gap-2 mb-2">
                   <Code className="w-5 h-5 text-white" />
-                  <p className="text-xs text-purple-100 font-medium">Accuracy</p>
+                  <p className="text-xs text-purple-100 font-medium">
+                    Accuracy
+                  </p>
                 </div>
-                <p className="text-3xl font-bold text-white">{statsData.codingAccuracy}%</p>
+                <p className="text-3xl font-bold text-white">
+                  {statsData.codingAccuracy}%
+                </p>
               </div>
             </div>
           </div>
 
           {/* Skills Section */}
           <div className="mt-6 pt-6 border-t border-white/20">
-            <p className="text-sm text-purple-100 font-semibold mb-3">Technical Skills</p>
+            <p className="text-sm text-purple-100 font-semibold mb-3">
+              Technical Skills
+            </p>
             <div className="flex flex-wrap gap-2">
               {Profile.skills.map((skill, idx) => (
-                <span key={idx} className="px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white rounded-lg text-sm font-medium border border-white/30 hover:bg-white/30 transition-colors">
+                <span
+                  key={idx}
+                  className="px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white rounded-lg text-sm font-medium border border-white/30 hover:bg-white/30 transition-colors"
+                >
                   {skill}
                 </span>
               ))}
@@ -219,81 +342,123 @@ export default function Dashboard() {
           <div className="flex-1 space-y-8">
             {/* Quick Stats */}
             <div className="grid grid-cols-4 gap-5">
-              <StatCard 
-                icon={Target} 
-                title="Total Interviews" 
-                value={statsData.totalInterviews} 
+              <StatCard
+                icon={Target}
+                title="Total Interviews"
+                value={statsData.totalInterviews}
                 subtitle="All time"
-                color="bg-purple-600" 
+                color="bg-purple-600"
               />
-              <StatCard 
-                icon={TrendingUp} 
-                title="Avg Confidence" 
-                value={`${statsData.avgConfidence}%`} 
+              <StatCard
+                icon={TrendingUp}
+                title="Avg Confidence"
+                value={`${statsData.avgConfidence}%`}
                 subtitle="+5% from last month"
-                color="bg-blue-600" 
+                color="bg-blue-600"
               />
-              <StatCard 
-                icon={Code} 
-                title="Coding Accuracy" 
-                value={`${statsData.codingAccuracy}%`} 
+              <StatCard
+                icon={Code}
+                title="Coding Accuracy"
+                value={`${statsData.codingAccuracy}%`}
                 subtitle="145 problems solved"
-                color="bg-teal-600" 
+                color="bg-teal-600"
               />
-              <StatCard 
-                icon={Calendar} 
-                title="Last Active" 
-                value={statsData.lastActive} 
+              <StatCard
+                icon={Calendar}
+                title="Last Active"
+                value={statsData.lastActive}
                 subtitle="2 days ago"
-                color="bg-cyan-600" 
+                color="bg-cyan-600"
               />
             </div>
 
             {/* Performance Analytics */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-5 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-purple-600" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 Performance Analytics
               </h2>
               <div className="grid grid-cols-2 gap-5">
                 {/* Confidence Trend */}
-                <div className="bg-white rounded-xl p-6 border border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Confidence Score Trend</h3>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                    Confidence Score Trend
+                  </h3>
                   <ResponsiveContainer width="100%" height={240}>
                     <LineChart data={confidenceTrend}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                      <XAxis dataKey="date" stroke="#9CA3AF" style={{ fontSize: '11px' }} tick={{ fill: '#6B7280' }} />
-                      <YAxis stroke="#9CA3AF" style={{ fontSize: '11px' }} tick={{ fill: '#6B7280' }} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#fff', 
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '12px'
-                        }} 
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#374151"
+                        className="dark:opacity-20"
                       />
-                      <Line type="monotone" dataKey="score" stroke="#9333ea" strokeWidth={2.5} dot={{ fill: '#9333ea', r: 4 }} />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#9CA3AF"
+                        style={{ fontSize: "11px" }}
+                        tick={{ fill: "#6B7280" }}
+                      />
+                      <YAxis
+                        stroke="#9CA3AF"
+                        style={{ fontSize: "11px" }}
+                        tick={{ fill: "#6B7280" }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f2937",
+                          border: "1px solid #374151",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          color: "#fff",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="score"
+                        stroke="#9333ea"
+                        strokeWidth={2.5}
+                        dot={{ fill: "#9333ea", r: 4 }}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
 
                 {/* Performance by Category */}
-                <div className="bg-white rounded-xl p-6 border border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Performance by Category</h3>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                    Performance by Category
+                  </h3>
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={performanceData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                      <XAxis dataKey="category" stroke="#9CA3AF" style={{ fontSize: '11px' }} tick={{ fill: '#6B7280' }} />
-                      <YAxis stroke="#9CA3AF" style={{ fontSize: '11px' }} tick={{ fill: '#6B7280' }} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#fff', 
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '12px'
-                        }} 
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#374151"
+                        className="dark:opacity-20"
                       />
-                      <Bar dataKey="score" fill="#9333ea" radius={[6, 6, 0, 0]} />
+                      <XAxis
+                        dataKey="category"
+                        stroke="#9CA3AF"
+                        style={{ fontSize: "11px" }}
+                        tick={{ fill: "#6B7280" }}
+                      />
+                      <YAxis
+                        stroke="#9CA3AF"
+                        style={{ fontSize: "11px" }}
+                        tick={{ fill: "#6B7280" }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f2937",
+                          border: "1px solid #374151",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          color: "#fff",
+                        }}
+                      />
+                      <Bar
+                        dataKey="score"
+                        fill="#9333ea"
+                        radius={[6, 6, 0, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -302,14 +467,16 @@ export default function Dashboard() {
 
             {/* Coding Practice Insights */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-5 flex items-center gap-2">
-                <Code className="w-5 h-5 text-purple-600" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+                <Code className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 Coding Practice Insights
               </h2>
               <div className="grid grid-cols-2 gap-5">
                 {/* Pie Chart */}
-                <div className="bg-white rounded-xl p-6 border border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Problems Solved vs Attempted</h3>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                    Problems Solved vs Attempted
+                  </h3>
                   <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
                       <Pie
@@ -323,31 +490,51 @@ export default function Dashboard() {
                         dataKey="value"
                       >
                         {codingInsights.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f2937",
+                          border: "1px solid #374151",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          color: "#fff",
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="flex items-center justify-center gap-4 mt-4">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-purple-600"></div>
-                      <span className="text-xs text-gray-600">Solved: 145</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        Solved: 145
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-purple-200"></div>
-                      <span className="text-xs text-gray-600">Remaining: 35</span>
+                      <div className="w-3 h-3 rounded-full bg-purple-200 dark:bg-purple-800"></div>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        Remaining: 35
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Common Mistakes */}
-                <div className="bg-white rounded-xl p-6 border border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Common Mistakes</h3>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                    Common Mistakes
+                  </h3>
                   <ul className="space-y-3">
                     {commonMistakes.map((mistake, idx) => (
-                      <li key={idx} className="flex items-start gap-2.5 text-xs text-gray-700">
-                        <AlertCircle className="w-4 h-4 mt-0.5 text-orange-500 flex-shrink-0" />
+                      <li
+                        key={idx}
+                        className="flex items-start gap-2.5 text-xs text-gray-700 dark:text-gray-300"
+                      >
+                        <AlertCircle className="w-4 h-4 mt-0.5 text-orange-500 dark:text-orange-400 flex-shrink-0" />
                         <span className="leading-relaxed">{mistake}</span>
                       </li>
                     ))}
@@ -358,41 +545,62 @@ export default function Dashboard() {
 
             {/* Interview History */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-5 flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-purple-600" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 Interview History
               </h2>
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-gray-100 bg-gray-50">
-                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
-                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Mode</th>
-                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Score</th>
-                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                      <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                          Role
+                        </th>
+                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                          Mode
+                        </th>
+                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                          Score
+                        </th>
+                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                          Action
+                        </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                       {interviewHistory.map((interview) => (
-                        <tr key={interview.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 text-sm text-gray-600">{interview.date}</td>
-                          <td className="px-6 py-4 text-sm font-medium text-gray-900">{interview.role}</td>
+                        <tr
+                          key={interview.id}
+                          className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                            {interview.date}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                            {interview.role}
+                          </td>
                           <td className="px-6 py-4">
-                            <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-medium">
+                            <span className="px-2.5 py-1 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-md text-xs font-medium">
                               {interview.mode}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">{interview.score}%</td>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">
+                            {interview.score}%
+                          </td>
                           <td className="px-6 py-4">
-                            <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded-md text-xs font-medium">
+                            <span className="px-2.5 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-md text-xs font-medium">
                               {interview.status}
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <button className="flex items-center gap-1.5 text-purple-600 hover:text-purple-700 text-sm font-medium transition-colors">
+                            <button className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 text-sm font-medium transition-colors">
                               <Eye className="w-4 h-4" />
                               View
                             </button>
@@ -407,67 +615,88 @@ export default function Dashboard() {
           </div>
 
           {/* Right Column - Sidebar */}
-          <div className="w-[400px] space-y-6 overflow-y-auto max-h-[calc(100vh-180px)] pr-2">
+          <div className="w-[400px] space-y-6">
             {/* Profile Snapshot */}
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <User className="w-4 h-4 text-purple-600" />
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <User className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 Profile Snapshot
               </h3>
               <div className="flex items-center gap-4 mb-5">
                 <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center text-white text-lg font-bold shadow-md">
-                  {Profile.name.split(' ').map(n => n[0]).join('')}
+                  {Profile.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">{Profile.name}</p>
-                  <p className="text-sm text-gray-600">{Profile.email}</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {Profile.name}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {Profile.email}
+                  </p>
                 </div>
               </div>
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs font-semibold text-gray-600 mb-2.5">Skills</p>
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2.5">
+                    Skills
+                  </p>
                   <div className="flex flex-wrap gap-1.5">
                     {Profile.skills.map((skill, idx) => (
-                      <span key={idx} className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md text-xs font-medium"
+                      >
                         {skill}
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="pt-4 border-t border-gray-100 space-y-3">
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                       <Briefcase className="w-4 h-4" />
                       <span>Experience</span>
                     </div>
-                    <span className="font-semibold text-gray-900 text-sm">{Profile.experience}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                      {Profile.experience}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                       <FolderKanban className="w-4 h-4" />
                       <span>Projects</span>
                     </div>
-                    <span className="font-semibold text-gray-900 text-sm">{Profile.projects}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                      {Profile.projects}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Feedback Insights */}
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Award className="w-4 h-4 text-purple-600" />
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Award className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 Feedback Insights
               </h3>
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center gap-2 mb-2.5">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <p className="text-xs font-semibold text-gray-900">Strengths</p>
+                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <p className="text-xs font-semibold text-gray-900 dark:text-white">
+                      Strengths
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {strengths.map((strength, idx) => (
-                      <span key={idx} className="px-2.5 py-1 bg-green-50 text-green-700 rounded-md text-xs font-medium">
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-md text-xs font-medium"
+                      >
                         {strength}
                       </span>
                     ))}
@@ -475,24 +704,33 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-2.5">
-                    <AlertCircle className="w-4 h-4 text-orange-600" />
-                    <p className="text-xs font-semibold text-gray-900">Areas for Improvement</p>
+                    <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                    <p className="text-xs font-semibold text-gray-900 dark:text-white">
+                      Areas for Improvement
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {improvements.map((improvement, idx) => (
-                      <span key={idx} className="px-2.5 py-1 bg-orange-50 text-orange-700 rounded-md text-xs font-medium">
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-md text-xs font-medium"
+                      >
                         {improvement}
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="bg-purple-50 rounded-lg p-4 border border-purple-100 mt-4">
+                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-100 dark:border-purple-800/30 mt-4">
                   <div className="flex items-start gap-2">
-                    <Brain className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                    <Brain className="w-4 h-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-xs font-semibold text-purple-900 mb-1">AI Insight</p>
-                      <p className="text-xs text-gray-700 leading-relaxed">
-                        Your performance has improved by 12% over the last month. Focus on system design questions to reach the next level.
+                      <p className="text-xs font-semibold text-purple-900 dark:text-purple-300 mb-1">
+                        AI Insight
+                      </p>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                        Your performance has improved by 12% over the last
+                        month. Focus on system design questions to reach the
+                        next level.
                       </p>
                     </div>
                   </div>
@@ -501,20 +739,25 @@ export default function Dashboard() {
             </div>
 
             {/* Notifications & Updates */}
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Bell className="w-4 h-4 text-purple-600" />
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Bell className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 Updates & Notifications
               </h3>
               <div className="space-y-3">
                 {notifications.map((notif) => {
                   const Icon = notif.icon;
                   return (
-                    <div key={notif.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="p-1.5 bg-purple-100 rounded-lg mt-0.5">
-                        <Icon className="w-3.5 h-3.5 text-purple-600" />
+                    <div
+                      key={notif.id}
+                      className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <div className="p-1.5 bg-purple-100 dark:bg-purple-900/50 rounded-lg mt-0.5">
+                        <Icon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                       </div>
-                      <p className="text-xs text-gray-700 leading-relaxed flex-1">{notif.message}</p>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed flex-1">
+                        {notif.message}
+                      </p>
                     </div>
                   );
                 })}
@@ -525,5 +768,4 @@ export default function Dashboard() {
       </div>
     </div>
   );
-};
-
+}
