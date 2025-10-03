@@ -26,15 +26,13 @@ export const setClerkHeaders = (user) => {
 };
 
 // User Profile APIs
-export const getUserProfile = async (user) => {
-  const response = await axios.get(`${API_BASE_URL}/api/user/profile`, {
-    headers: {
-      "X-User-Id": user.id,
-      "X-User-Email": user.emailAddresses[0]?.emailAddress,
-    },
-  });
+// lib/api.js
+export const getUserProfile = async () => {
+  const response = await api.get("/api/user/profile");
   return response.data;
 };
+
+
 
 export const updateUserProfile = async (user, data) => {
   const response = await axios.put(`${API_BASE_URL}/api/user/profile`, data, {
