@@ -11,7 +11,7 @@ export const ROUTES = {
   START_INTERVIEW: "/interviews/:id/start",
   INTERVIEW_SESSION: "/interviews/:id/session",
   RESULTS: "/interviews/:id/results",
-  PROFILE: "/profile",
+  PROFILE: "/completeprofile",
   MYPROFILE: "/MyProfile",
   SETTINGS: "/settings",
 };
