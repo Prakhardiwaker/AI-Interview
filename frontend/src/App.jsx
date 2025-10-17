@@ -25,6 +25,9 @@ import NotFound from "./pages/NotFound";
 import ProfilePage from "./pages/ProfilePage";
 import MyProfile from "./pages/MyProfile";
 import CompleteProfile from "./pages/CompleteProfile";
+import InterviewSession from "./pages/InterviewSession";
+import InterviewSetup from "./pages/InterviewSetup";
+import FeedbackPage from "./pages/FeedbackPage";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -38,14 +41,12 @@ function ProfileCompletionGuard({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [checking, setChecking] = useState(true);
-  const [profileCompleted, setProfileCompleted] = useState(false);
 
   useEffect(() => {
     const checkProfile = async () => {
       if (isSignedIn && user && location.pathname !== ROUTES.PROFILE) {
         try {
           const result = await checkProfileCompletion(user);
-          setProfileCompleted(result.profileCompleted);
 
           // Redirect to profile page if not completed
           if (!result.profileCompleted) {
@@ -79,68 +80,131 @@ function ProfileCompletionGuard({ children }) {
   return children;
 }
 
+// Main content component - this is inside the Router
+function AppContent() {
+  const navigate = useNavigate();
+  const [sessionConfig, setSessionConfig] = useState(null);
+  const [feedbackData, setFeedbackData] = useState(null);
+
+  // Handle interview setup completion
+  const handleSetup = (config) => {
+    setSessionConfig(config);
+    navigate("/interview");
+  };
+
+  // Handle interview completion
+  const handleInterviewComplete = (data) => {
+    setFeedbackData(data);
+    navigate("/feedback");
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <main className="container mx-auto px-4 py-8">
+        <ProfileCompletionGuard>
+          <Routes>
+            <Route path={ROUTES.HOME} element={<Home />} />
+
+            {/* Profile route - accessible without completion */}
+            <Route
+              path={ROUTES.PROFILE}
+              element={
+                <ProtectedRoute>
+                  <CompleteProfile />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Protected routes - require profile completion */}
+            <Route
+              path={ROUTES.DASHBOARD}
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Interview Flow Routes */}
+            <Route
+              path="/setup"
+              element={
+                <ProtectedRoute>
+                  <InterviewSetup onStart={handleSetup} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/interview"
+              element={
+                <ProtectedRoute>
+                  <InterviewSession
+                    sessionConfig={sessionConfig}
+                    onComplete={handleInterviewComplete}
+                  />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/feedback"
+              element={
+                <ProtectedRoute>
+                  <FeedbackPage feedbackData={feedbackData} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/interviews/:id"
+              element={
+                <ProtectedRoute>
+                  <FeedbackPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Other routes */}
+            <Route
+              path={ROUTES.INTERVIEWS}
+              element={
+                <ProtectedRoute>
+                  <Interviews />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.SETTINGS}
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.MYPROFILE}
+              element={
+                <ProtectedRoute>
+                  <MyProfile />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </ProfileCompletionGuard>
+      </main>
+    </div>
+  );
+}
+
+// Main App component - Router is here
 function App() {
   return (
     <ErrorBoundary>
       <ClerkProvider publishableKey={clerkPubKey}>
         <ThemeProvider>
           <Router>
-            <div className="min-h-screen bg-background">
-              <Navbar />
-              <main className="container mx-auto px-4 py-8">
-                <ProfileCompletionGuard>
-                  <Routes>
-                    <Route path={ROUTES.HOME} element={<Home />} />
-
-                    {/* Profile route - accessible without completion */}
-                    <Route
-                      path={ROUTES.PROFILE}
-                      element={
-                        <ProtectedRoute>
-                          <CompleteProfile />
-                        </ProtectedRoute>
-                      }
-                    />
-
-                    {/* Protected routes - require profile completion */}
-                    <Route
-                      path={ROUTES.DASHBOARD}
-                      element={
-                        <ProtectedRoute>
-                          <Dashboard />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path={ROUTES.INTERVIEWS}
-                      element={
-                        <ProtectedRoute>
-                          <Interviews />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path={ROUTES.SETTINGS}
-                      element={
-                        <ProtectedRoute>
-                          <Settings />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path={ROUTES.MYPROFILE}
-                      element={
-                        <ProtectedRoute>
-                          <MyProfile />
-                        </ProtectedRoute>
-                      }
-                    />
-
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </ProfileCompletionGuard>
-              </main>
-            </div>
+            <AppContent />
           </Router>
         </ThemeProvider>
       </ClerkProvider>
