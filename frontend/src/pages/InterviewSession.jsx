@@ -1,6 +1,6 @@
 // src/pages/InterviewSession.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { Volume2, SkipForward } from "lucide-react";
+import { Volume2, SkipForward, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const useAutoDetectRecorder = () => {
@@ -144,6 +144,7 @@ const InterviewSession = ({ sessionConfig, onComplete }) => {
   const [isListening, setIsListening] = useState(false);
   const [questionsRemaining, setQuestionsRemaining] = useState(5);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [showTerminateModal, setShowTerminateModal] = useState(false);
 
   const videoRef = useRef(null);
   const timerIntervalRef = useRef(null);
@@ -250,6 +251,47 @@ const InterviewSession = ({ sessionConfig, onComplete }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTerminateInterview = async () => {
+    // Stop all ongoing processes
+    window.speechSynthesis.cancel();
+    if (isCapturing) {
+      await stopAudioCapture();
+    }
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+
+    // Stop webcam
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+    }
+
+    // Call backend API to terminate interview
+    try {
+      // Replace with your actual API endpoint
+      // await fetch('/api/interview/terminate', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     sessionId: sessionConfig?.sessionId,
+      //     answers: answers,
+      //     timeSpent: config.duration * 60 - timeLeft,
+      //     terminated: true
+      //   })
+      // });
+
+      console.log("Interview terminated", {
+        answers,
+        timeSpent: config.duration * 60 - timeLeft,
+      });
+    } catch (err) {
+      console.error("Failed to terminate interview:", err);
+    }
+
+    // Navigate back to interviews page
+    navigate("/interviews");
   };
 
   // Timer
@@ -387,6 +429,40 @@ const InterviewSession = ({ sessionConfig, onComplete }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-4 md:p-8">
+      {/* Terminate Confirmation Modal */}
+      {showTerminateModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-red-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-center mb-6">
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
+                <XCircle size={32} className="text-red-400" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3 text-center">
+              Terminate Interview?
+            </h2>
+            <p className="text-gray-300 text-center mb-6">
+              Are you sure you want to end this interview session? This action
+              cannot be undone and your progress will be saved.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowTerminateModal(false)}
+                className="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleTerminateInterview}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl font-semibold transition"
+              >
+                End Interview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
@@ -395,21 +471,30 @@ const InterviewSession = ({ sessionConfig, onComplete }) => {
             Role: {config.role || "Software Developer"}
           </p>
         </div>
-        <div
-          className={`text-center px-4 py-2 rounded-lg ${
-            timeLeft < 60
-              ? "bg-red-500/20 border border-red-500/50"
-              : "bg-white/10 border border-white/20"
-          }`}
-        >
-          <p className="text-gray-400 text-xs">Time Left</p>
-          <p
-            className={`text-2xl font-bold font-mono ${
-              timeLeft < 60 ? "text-red-400 animate-pulse" : "text-green-400"
+        <div className="flex items-center gap-4">
+          <div
+            className={`text-center px-4 py-2 rounded-lg ${
+              timeLeft < 60
+                ? "bg-red-500/20 border border-red-500/50"
+                : "bg-white/10 border border-white/20"
             }`}
           >
-            {formatTime(timeLeft)}
-          </p>
+            <p className="text-gray-400 text-xs">Time Left</p>
+            <p
+              className={`text-2xl font-bold font-mono ${
+                timeLeft < 60 ? "text-red-400 animate-pulse" : "text-green-400"
+              }`}
+            >
+              {formatTime(timeLeft)}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowTerminateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 text-red-300 hover:text-red-200 rounded-lg font-semibold transition"
+          >
+            <XCircle size={20} />
+            <span className="hidden md:inline">Terminate</span>
+          </button>
         </div>
       </div>
 
