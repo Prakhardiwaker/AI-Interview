@@ -14,7 +14,7 @@ import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import { Navbar } from "./components/layout/Navbar";
 import { ROUTES } from "./lib/constants";
-import { checkProfileCompletion } from "./lib/api";
+import { checkProfileCompletion, setClerkHeaders } from "./lib/api"; // ✅ Imported setClerkHeaders
 
 // Pages
 import Home from "./pages/Home";
@@ -35,7 +35,7 @@ if (!clerkPubKey) {
   throw new Error("Missing Clerk Publishable Key");
 }
 
-// Component that handles profile completion redirect
+// ✅ Component that handles profile completion redirect
 function ProfileCompletionGuard({ children }) {
   const { isSignedIn, user } = useUser();
   const navigate = useNavigate();
@@ -80,11 +80,25 @@ function ProfileCompletionGuard({ children }) {
   return children;
 }
 
-// Main content component - this is inside the Router
+// ✅ Main content component (inside Router)
 function AppContent() {
   const navigate = useNavigate();
   const [sessionConfig, setSessionConfig] = useState(null);
   const [feedbackData, setFeedbackData] = useState(null);
+
+  const { user, isSignedIn } = useUser();
+
+  // ✅ Automatically attach Clerk headers globally to all API requests
+  useEffect(() => {
+    if (isSignedIn && user) {
+      setClerkHeaders(user);
+      console.log("✅ Clerk headers attached for user:", user.id);
+    } else {
+      // Remove headers if user logs out
+      setClerkHeaders(null);
+      console.log("🧹 Clerk headers cleared");
+    }
+  }, [isSignedIn, user]);
 
   // Handle interview setup completion
   const handleSetup = (config) => {
@@ -197,7 +211,7 @@ function AppContent() {
   );
 }
 
-// Main App component - Router is here
+// ✅ Main App component
 function App() {
   return (
     <ErrorBoundary>

@@ -48,13 +48,40 @@ class CodeSubmission(BaseModel):
     code: str
 
 
+
+
+
+
+
+
+
 @app.post("/api/setup")
-def setup_session(
-    role: str = Form(...),
-    interview_type: str = Form(...),
-    custom_round: str = Form(''),
-    user: str = Depends(get_current_user)
+async def setup_session(
+    role: Optional[str] = Form(None),
+    interview_type: Optional[str] = Form(None),
+    duration: Optional[int] = Form(None),
+    body: dict = Body(None),
+    user: str = Depends(get_current_user),
+    request: Request = None
 ):
+    form = await request.form()
+    print("🧾 RAW FORM RECEIVED:", dict(form))
+
+    if body:
+        print("📦 JSON BODY RECEIVED:", body)
+
+    # Merge fallback if needed
+    if body:
+        role = role or body.get("role")
+        interview_type = interview_type or body.get("interview_type")
+        duration = duration or body.get("duration")
+
+    if not all([role, interview_type, duration]):
+        raise HTTPException(status_code=400, detail="Missing fields in setup request")
+
+    print("✅ Parsed values:", role, interview_type, duration)
+    
+
     session_id = str(uuid4())
 
     # Load parsed resume text from DB using clerkId
@@ -81,30 +108,54 @@ def setup_session(
         "Experience: " + ", ".join(resume.get("experience", []))
     ])
 
-    if interview_type == "full":
+    # Duration to rounds mapping
+    duration_to_rounds = {
+        '3': 7,
+        '5': 10,
+        '10': 15,
+        '15': 20,
+        '20': 25,
+        '30': 30
+    }
+
+    # Validate duration
+    if duration not in duration_to_rounds:
+        raise HTTPException(status_code=400, detail="Invalid duration value. Must be one of {3, 5, 10, 15, 20, 30}.")
+
+    rounds = duration_to_rounds[duration]
+
+    # Session setup logic
+    if interview_type == "technical":
+        user_sessions[user] = InterviewSession(role=role, resume_obj=resume_text, rounds=rounds, session_id=session_id)
+
+    elif interview_type == "behavioral":
+        user_sessions[user] = HRInterviewSession(role=role, rounds=rounds, session_id=session_id)
+
+    elif interview_type == "coding":
+        # Skip coding round for frontend roles if desired
+        if role.lower() == "frontend developer":
+            raise HTTPException(status_code=400, detail="Frontend developers do not have coding rounds.")
+        user_sessions[user] = CodingSession(role=role, rounds=rounds)
+
+    elif interview_type == "full":
         session_data = {
             "mode": "full",
-            "tech": InterviewSession(role=role, resume_obj=resume_text, rounds=2, session_id=session_id),
-            "hr": HRInterviewSession(role=role, rounds=2, session_id=session_id + "_hr"),
+            "tech": InterviewSession(role=role, resume_obj=resume_text, rounds=rounds, session_id=session_id),
+            "hr": HRInterviewSession(role=role, rounds=rounds, session_id=session_id + "_hr"),
             "current": "tech",
             "role": role
         }
 
-        # Skip coding round for frontend roles
         if role.lower() != "frontend developer":
-            session_data["code"] = CodingSession(role=role, rounds=3)
+            session_data["code"] = CodingSession(role=role, rounds=rounds)
 
         user_sessions[user] = session_data
-    elif custom_round == "technical":
-        user_sessions[user] = InterviewSession(role=role, resume_obj=resume_text, rounds=1, session_id=session_id)
-    elif custom_round == "behavioral":
-        user_sessions[user] = HRInterviewSession(role=role, rounds=1, session_id=session_id)
-    elif custom_round == "coding":
-        user_sessions[user] = CodingSession(role=role, rounds=3)
+
     else:
-        raise HTTPException(status_code=400, detail="Invalid round type")
-    
+        raise HTTPException(status_code=400, detail="Invalid interview type")
+
     return {"session_id": session_id}
+
 
 
 @app.post("/api/parse-resume")

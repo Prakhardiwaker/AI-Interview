@@ -1,19 +1,45 @@
-import React, { useState } from "react";
-import { ChevronRight, Clock, Code2, Users, Brain } from "lucide-react";
+// src/pages/InterviewSetup.jsx - Final, stable version
+import React, { useState, useEffect } from "react";
+import {
+  ChevronRight,
+  Clock,
+  Code2,
+  Users,
+  Brain,
+  AlertCircle,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@clerk/clerk-react";
+import { setupInterview, storage } from "../lib/api";
 
-const InterviewSetup = ({ onStart }) => {
+const InterviewSetup = () => {
+  const navigate = useNavigate();
+  const { isLoaded, isSignedIn } = useAuth();
+
   const [step, setStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedType, setSelectedType] = useState("");
   const [selectedDuration, setSelectedDuration] = useState(5);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Load last setup from localStorage
+  useEffect(() => {
+    const lastSetup = storage.getLastSetup();
+    if (lastSetup) {
+      setSelectedRole(lastSetup.role || "");
+      setSelectedType(lastSetup.interviewType || "");
+      setSelectedDuration(lastSetup.duration || 5);
+    }
+  }, []);
 
   const roles = [
-    { id: "frontend", name: "Frontend Developer", icon: "⚛️" },
-    { id: "backend", name: "Backend Developer", icon: "🔧" },
-    { id: "fullstack", name: "Full Stack Developer", icon: "🔗" },
-    { id: "devops", name: "DevOps Engineer", icon: "☁️" },
-    { id: "data_science", name: "Data Scientist", icon: "📊" },
-    { id: "product_manager", name: "Product Manager", icon: "📱" },
+    { id: "frontend developer", name: "Frontend Developer", icon: "⚛️" },
+    { id: "backend developer", name: "Backend Developer", icon: "🔧" },
+    { id: "full stack developer", name: "Full Stack Developer", icon: "🔗" },
+    { id: "devops engineer", name: "DevOps Engineer", icon: "☁️" },
+    { id: "data scientist", name: "Data Scientist", icon: "📊" },
+    { id: "product manager", name: "Product Manager", icon: "📱" },
   ];
 
   const interviewTypes = [
@@ -45,14 +71,82 @@ const InterviewSetup = ({ onStart }) => {
 
   const durations = [3, 5, 10, 15, 20, 30];
 
-  const handleStart = () => {
-    onStart({
-      role: selectedRole,
-      interviewType: selectedType,
-      duration: selectedDuration,
-    });
+  // ================= HANDLE START =================
+  const handleStart = async () => {
+    if (!isLoaded || !isSignedIn) {
+      setError("Please sign in to start an interview");
+      return;
+    }
+
+    if (!selectedRole || !selectedType || !selectedDuration) {
+      setError("Please complete all steps before starting");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const setupData = {
+        role: selectedRole,
+        interviewType: selectedType,
+        duration: selectedDuration,
+      };
+
+      console.log("Sending setup data:", setupData);
+
+      const response = await setupInterview(setupData);
+      console.log("Interview setup response:", response);
+
+      navigate("/interview-session", {
+        state: {
+          sessionConfig: {
+            ...setupData,
+            sessionId: response.session_id,
+          },
+        },
+      });
+    } catch (err) {
+      console.error("Setup failed:", err);
+
+      // Gracefully parse FastAPI error messages
+      let message = "Failed to start interview. Please try again.";
+
+      const detail = err.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        message = detail.map((e) => e.msg).join(", ");
+      } else if (typeof detail === "string") {
+        message = detail;
+      }
+
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // ================= ERROR ALERT =================
+  const ErrorAlert = () => (
+    <div className="max-w-4xl mx-auto mb-6">
+      <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-start gap-3">
+        <AlertCircle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <p className="text-red-200 font-semibold">Setup Error</p>
+          <p className="text-red-300 text-sm mt-1">
+            {typeof error === "string" ? error : JSON.stringify(error)}
+          </p>
+        </div>
+        <button
+          onClick={() => setError(null)}
+          className="text-red-300 hover:text-red-200 transition"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+
+  // ================= RENDER =================
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-4 md:p-8">
       {/* Header */}
@@ -64,6 +158,8 @@ const InterviewSetup = ({ onStart }) => {
           Configure your interview session and get ready to showcase your skills
         </p>
       </div>
+
+      {error && <ErrorAlert />}
 
       {/* Progress Indicator */}
       <div className="max-w-4xl mx-auto mb-12">
@@ -116,7 +212,7 @@ const InterviewSetup = ({ onStart }) => {
         </div>
       </div>
 
-      {/* Step 1: Select Role */}
+      {/* Step 1: Role */}
       {step === 1 && (
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold text-white mb-8">
@@ -142,7 +238,7 @@ const InterviewSetup = ({ onStart }) => {
             <button
               onClick={() => setStep(2)}
               disabled={!selectedRole}
-              className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-semibold transition disabled:opacity-50"
             >
               Continue <ChevronRight size={20} />
             </button>
@@ -150,7 +246,7 @@ const InterviewSetup = ({ onStart }) => {
         </div>
       )}
 
-      {/* Step 2: Interview Type */}
+      {/* Step 2: Type */}
       {step === 2 && (
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold text-white mb-8">
@@ -191,7 +287,7 @@ const InterviewSetup = ({ onStart }) => {
             <button
               onClick={() => setStep(3)}
               disabled={!selectedType}
-              className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-semibold transition disabled:opacity-50"
             >
               Continue <ChevronRight size={20} />
             </button>
@@ -206,7 +302,6 @@ const InterviewSetup = ({ onStart }) => {
             Select interview duration
           </h2>
 
-          {/* Duration Slider */}
           <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 mb-8">
             <div className="mb-8">
               <div className="flex justify-between items-end mb-4">
@@ -230,7 +325,6 @@ const InterviewSetup = ({ onStart }) => {
               </div>
             </div>
 
-            {/* Quick Select Buttons */}
             <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mt-6">
               {durations.map((dur) => (
                 <button
@@ -249,24 +343,24 @@ const InterviewSetup = ({ onStart }) => {
           </div>
 
           {/* Summary */}
-          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 mb-8">
+          <div className="bg-white/10 border border-white/20 rounded-2xl p-8 mb-8">
             <h3 className="text-lg font-bold text-white mb-6">
               Interview Summary
             </h3>
             <div className="space-y-4">
-              <div className="flex justify-between items-center pb-4 border-b border-white/10">
+              <div className="flex justify-between pb-4 border-b border-white/10">
                 <span className="text-gray-300">Role</span>
                 <span className="font-semibold text-white">
                   {roles.find((r) => r.id === selectedRole)?.name}
                 </span>
               </div>
-              <div className="flex justify-between items-center pb-4 border-b border-white/10">
+              <div className="flex justify-between pb-4 border-b border-white/10">
                 <span className="text-gray-300">Interview Type</span>
                 <span className="font-semibold text-white">
                   {interviewTypes.find((t) => t.id === selectedType)?.name}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between">
                 <span className="text-gray-300">Duration</span>
                 <span className="font-semibold text-white">
                   {selectedDuration} minutes
@@ -275,7 +369,6 @@ const InterviewSetup = ({ onStart }) => {
             </div>
           </div>
 
-          {/* Info Box */}
           <div className="bg-blue-500/20 border border-blue-500/50 rounded-xl p-4 mb-8">
             <p className="text-sm text-blue-200">
               💡 Make sure you're in a quiet environment with good lighting and
@@ -286,15 +379,26 @@ const InterviewSetup = ({ onStart }) => {
           <div className="flex justify-between">
             <button
               onClick={() => setStep(2)}
-              className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition"
+              disabled={loading}
+              className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition disabled:opacity-50"
             >
               Back
             </button>
             <button
               onClick={handleStart}
-              className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-bold text-lg transition transform hover:scale-105"
+              disabled={loading}
+              className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-bold text-lg transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              Start Interview <ChevronRight size={24} />
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Starting...
+                </>
+              ) : (
+                <>
+                  Start Interview <ChevronRight size={24} />
+                </>
+              )}
             </button>
           </div>
         </div>
