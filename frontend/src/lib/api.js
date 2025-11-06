@@ -141,28 +141,20 @@ export const storage = {
 export const setupInterview = async (data) => {
   console.log("📤 setupInterview() called with:", data);
 
-  const formData = new FormData();
-  formData.append("role", data.role);
-  formData.append("interview_type", data.interviewType);
-  formData.append("duration", String(data.duration));
 
-  for (const pair of formData.entries()) {
-    console.log("🧾 Form field:", pair[0], "=>", pair[1]);
-  }
+
 
   // Get token manually from Clerk
-  let headers = {};
-  if (getTokenFunction) {
-    const token = await getTokenFunction();
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-  }
+  const headers = await applyAuthToken();
 
   // ❗️Do NOT set Content-Type manually, or FormData breaks
-  const response = await axios.post(
-    "http://localhost:8000/api/setup",
-    formData,
+  const response = await api.post(
+    "/api/setup",
+    {
+      role: data.role,
+      interview_type: data.interviewType,
+      duration: data.duration
+    },
     { headers }
   );
 

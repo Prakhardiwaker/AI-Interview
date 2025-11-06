@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
+
+import { setAuthTokenGetter } from "../lib/api";
 import { setupInterview, storage } from "../lib/api";
 
 const InterviewSetup = () => {
@@ -22,16 +24,17 @@ const InterviewSetup = () => {
   const [selectedDuration, setSelectedDuration] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
+  const { getToken } = useAuth();
   // Load last setup from localStorage
   useEffect(() => {
     const lastSetup = storage.getLastSetup();
+    setAuthTokenGetter(getToken);
     if (lastSetup) {
       setSelectedRole(lastSetup.role || "");
       setSelectedType(lastSetup.interviewType || "");
       setSelectedDuration(lastSetup.duration || 5);
     }
-  }, []);
+  }, [getToken]);
 
   const roles = [
     { id: "frontend developer", name: "Frontend Developer", icon: "⚛️" },

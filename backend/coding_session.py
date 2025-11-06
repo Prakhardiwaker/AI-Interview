@@ -15,7 +15,7 @@ class CodingSession:
 
         # Define basic coding problems
         # 🔹 Load all problems from a JSON file
-        with open("problems.json", "r") as f:
+        with open("backend\problems.json", "r") as f:
             self.all_problems = json.load(f)
 
         # 🔀 Shuffle to randomize order and avoid repeat
