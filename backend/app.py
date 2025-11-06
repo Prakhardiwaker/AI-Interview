@@ -57,24 +57,20 @@ class CodeSubmission(BaseModel):
 
 @app.post("/api/setup")
 async def setup_session(
-    role: Optional[str] = Form(None),
-    interview_type: Optional[str] = Form(None),
-    duration: Optional[int] = Form(None),
-    body: dict = Body(None),
-    user: str = Depends(get_current_user),
-    request: Request = None
-):
-    form = await request.form()
-    print("🧾 RAW FORM RECEIVED:", dict(form))
 
+    body: dict = Body(None),
+    user: str = Depends(get_current_user)
+
+):
+    
     if body:
         print("📦 JSON BODY RECEIVED:", body)
 
     # Merge fallback if needed
     if body:
-        role = role or body.get("role")
-        interview_type = interview_type or body.get("interview_type")
-        duration = duration or body.get("duration")
+        role =  body.get("role")
+        interview_type =  body.get("interview_type")
+        duration =  body.get("duration")
 
     if not all([role, interview_type, duration]):
         raise HTTPException(status_code=400, detail="Missing fields in setup request")
@@ -110,12 +106,12 @@ async def setup_session(
 
     # Duration to rounds mapping
     duration_to_rounds = {
-        '3': 7,
-        '5': 10,
-        '10': 15,
-        '15': 20,
-        '20': 25,
-        '30': 30
+        3: 7,
+        5: 10,
+        10: 15,
+        15: 20,
+        20: 25,
+        30: 30
     }
 
     # Validate duration
