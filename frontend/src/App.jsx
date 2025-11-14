@@ -150,7 +150,7 @@ function AppContent() {
               }
             />
             <Route
-              path="/interview"
+              path="/interview-session"
               element={
                 <ProtectedRoute>
                   <InterviewSession

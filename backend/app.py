@@ -38,11 +38,12 @@ app.include_router(dashboard.router)
 # CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],  # instead of ["*"]
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*", "X-User-Id", "X-User-Email"],  # ✅ explicitly allow Clerk headers
 )
+
 
 class CodeSubmission(BaseModel):
     code: str
@@ -179,9 +180,17 @@ async def handle_audio(audio: UploadFile = File(...), focus_score: Optional[floa
 
     # Save audio
     contents = await audio.read()
-    tmp_path = f"temp_{uuid4().hex}.wav"
+    tmp_path = f"temp_{uuid4().hex}.webm"
+    
+
     with open(tmp_path, "wb") as f:
         f.write(contents)
+    if os.path.getsize(tmp_path) < 1000:  # roughly <1KB = empty/silent
+        os.remove(tmp_path)
+        # Return initial question instead of transcribing
+        session = user_sessions[user]
+        first_question = session.ask_question()
+        return {"text": first_question, "answer": "", "confidence": 0.0}
 
     answer = transcribe(tmp_path)
     confidence = get_confidence_score(tmp_path)
