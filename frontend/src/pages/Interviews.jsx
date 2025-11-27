@@ -92,6 +92,19 @@ export default function Interviews() {
     return mode;
   };
 
+  // 🔍 Helper to extract "overall score" safely from feedback
+  const getOverallScore = (interview) => {
+    const fb = interview.feedback || {};
+
+    // Try common field names – adjust if your backend uses a specific one:
+    if (typeof fb.overall_score === "number") return fb.overall_score;
+    if (typeof fb.overallScore === "number") return fb.overallScore;
+    if (typeof fb.overall === "number") return fb.overall;
+    if (typeof fb.overall?.score === "number") return fb.overall.score;
+
+    return null;
+  };
+
   // Stat Card styled like dashboard
   const StatsCard = ({ icon: Icon, label, value, color }) => (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 hover:shadow-md dark:hover:shadow-gray-900/50 transition-all duration-200">
@@ -111,7 +124,7 @@ export default function Interviews() {
     </div>
   );
 
-  // Stats (similar approach as before, just re-styled)
+  // 📊 Stats using REAL data
   const stats = {
     total: interviews.length,
     avgConfidence:
@@ -125,30 +138,33 @@ export default function Interviews() {
               100
           )
         : 0,
+
+    // ⭐ Avg. "overall score" across all interviews (from feedback)
     avgScore:
       interviews.length > 0
         ? (() => {
-            const withScore = interviews.filter(
-              (i) => i.feedback?.technical?.score
-            );
-            if (withScore.length === 0) return "N/A";
-            const sum = withScore.reduce(
-              (acc, i) => acc + (i.feedback?.technical?.score || 0),
-              0
-            );
-            return (sum / withScore.length).toFixed(1);
+            const scores = interviews
+              .map(getOverallScore)
+              .filter((v) => typeof v === "number");
+
+            if (scores.length === 0) return "0.0";
+
+            const sum = scores.reduce((acc, v) => acc + v, 0);
+            return (sum / scores.length).toFixed(1);
           })()
         : "0.0",
   };
 
-  // For table: pick a primary score to show
+  // For table: pick a primary score to show (technical > behavioral > coding)
   const getPrimaryScore = (interview) => {
     const t = interview.feedback?.technical?.score;
     const b = interview.feedback?.behavioral?.score;
     const c = interview.feedback?.coding?.score;
-    if (typeof t === "number") return { label: "Technical", value: t };
-    if (typeof b === "number") return { label: "Behavioral", value: b };
-    if (typeof c === "number") return { label: "Coding", value: c };
+
+    // Assuming backend scores are 0–100; divide by 10 so we show ~0–10.
+    if (typeof t === "number") return { label: "Technical", value: t / 10 };
+    if (typeof b === "number") return { label: "Behavioral", value: b / 10 };
+    if (typeof c === "number") return { label: "Coding", value: c / 10 };
     return null;
   };
 
@@ -343,7 +359,7 @@ export default function Interviews() {
                                   primary.value
                                 )}`}
                               >
-                                {primary.value}
+                                {primary.value.toFixed(1)}
                               </span>
                               <span className="text-[10px] text-gray-600 dark:text-gray-300">
                                 {primary.label}
