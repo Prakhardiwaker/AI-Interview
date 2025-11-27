@@ -18,8 +18,11 @@ You are an expert HR recruiter. Evaluate the following behavioral interview tran
 
 {transcript}
 
-Based on the candidate's responses, score them across:
+Based on the candidate's responses, score them across the following categories — each **out of 100**, where:
+- 0 = extremely poor
+- 100 = exceptional
 
+Categories:
 - Relevance to the questions
 - Clarity of explanation
 - Depth of knowledge
@@ -29,15 +32,16 @@ Based on the candidate's responses, score them across:
 
 Respond **only** with a well-formatted JSON object like this:
 
-{{
-  "relevance": 4.5,
-  "clarity": 4.0,
-  "depth": 3.5,
-  "examples": 3.0,
-  "communication": 4.2,
-  "overall": 4.1,
-  "summary": "Your answers were clear and relevant, with good communication. You could deepen your examples for impact."
-}}
+{
+  "relevance": 85,
+  "clarity": 78,
+  "depth": 70,
+  "examples": 65,
+  "communication": 82,
+  "overall": 80,
+  "summary": "Your answers were clear and relevant with strong communication, though real-world depth could be improved."
+}
+
 """
     )
 

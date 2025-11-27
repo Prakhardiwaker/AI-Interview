@@ -1,50 +1,72 @@
 # memory_interview_chain.py
 
 import json
-from langchain_ollama import OllamaLLM
+
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.chat_message_histories import ChatMessageHistory
+# backend/technical_question_chain.py
+
+from langchain_core.prompts import ChatPromptTemplate
 from backend.llm_groq_config import llm
-# Load LLM
-#llm = OllamaLLM(model="mistral")
 
-# Prompt with memory context
-question_prompt = ChatPromptTemplate.from_messages([
-    ("system", 
-"""You are a smart and adaptive technical interviewer.
+_question_prompt = ChatPromptTemplate.from_template("""
+You are an interviewer generating the next technical question for the candidate.
 
-You will conduct a multi-round interview for the role of {role}, using the candidate's resume and prior responses to guide the flow. You have access to the full conversation history, so avoid repeating topics already covered.
+Inputs:
+- Role: {role}
+- Controller decision: {decision}
+- Previous question: "{prev_question}"
+- Candidate answer: "{candidate_answer}"
+- Resume excerpt (skills + experience): {resume_excerpt}
+- Recently covered topics (keyword-based): {recent_topics}
 
-At each step, analyze the candidate’s **most recent response** and decide whether to:
+Your task:
+Generate EXACTLY ONE technical interview question, obeying the controller decision.
 
-1. Ask a relevant follow-up question (if the last answer was weak, vague, or incorrect)  
-2. Or move to a new topic area (if the previous answer was strong)
+Rules per decision:
 
-If the previous answer was **good**, then:
-✅ Start your next message with a short **positive remark**, like:
-- "That’s a solid explanation!"
-- "Nice! You’ve got that covered."
-- "Great! Now moving on..."
+1. depth_probe  
+   → Ask a deeper sub-question within the SAME topic as the previous question.
 
-Then, proceed with a **new question**.
+2. concept_clarification  
+   → Ask the candidate to specifically clarify part of their answer that seems vague, incorrect, or incomplete.
 
-If the answer was weak or unclear:
-- Simply ask a clarifying or follow-up question.
-- Or smoothly switch to another relevant topic without praise.
+3. edge_case  
+   → Ask about edge cases, tricky constraints, or performance boundaries related to the previous question.
 
-📌 Rules:
-- Ask only **one question** at a time.
-- Do **not** generate multiple questions.
-- Be short, clear, and specific.
-- Vary the questions across areas like resume content, DSA, system design, debugging, logical reasoning, etc. based on the role.
-- Do **not** repeat previously covered topics in the history.
+4. follow_up_question  
+   → Ask the next logical follow-up question in the SAME topic.
 
-Respond only with the **next question or follow-up**, optionally preceded by a short compliment if warranted.
-"""),
-    MessagesPlaceholder("chat_history"),
-    ("human", "Ask the next technical interview question for the role of {role} based on the resume:\n{resume}")
-])
+
+5. topic_transition  
+   → Select a NEW technical topic inferred from the candidate's resume skills or role.
+     Avoid topics listed in recently covered topics.
+     Ask a question directly related to the chosen new topic.
+
+Output ONLY the question. No explanations, no multiple questions.
+""")
+
+def generate_technical_question(role,
+                                decision,
+                                prev_question,
+                                candidate_answer,
+                                resume_excerpt,
+                                recent_topics):
+    prompt = _question_prompt.format(
+        role=role or "general",
+        decision=decision,
+        prev_question=prev_question or "",
+        candidate_answer=candidate_answer or "",
+        resume_excerpt=resume_excerpt[:1200],
+        recent_topics=", ".join(recent_topics) if recent_topics else "none"
+    )
+
+    resp = llm.invoke(prompt).content.strip()
+    
+    # return only the first question-like sentence if model misbehaves
+    return resp
+
 
 
 # Memory session store
@@ -55,12 +77,3 @@ def get_session_history(session_id):
         session_store[session_id] = ChatMessageHistory()
     return session_store[session_id]
 
-# Chain with memory
-interview_chain = question_prompt | llm
-
-memory_chain = RunnableWithMessageHistory(
-    interview_chain,
-    get_session_history,
-    input_messages_key="resume",
-    history_messages_key="chat_history"
-)
