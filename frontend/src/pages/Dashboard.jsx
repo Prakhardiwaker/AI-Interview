@@ -387,8 +387,8 @@ export default function Dashboard() {
         typeof iv.average_confidence === "number"
           ? iv.average_confidence
           : typeof iv.avg_confidence === "number"
-          ? iv.avg_confidence
-          : null;
+            ? iv.avg_confidence
+            : null;
 
       if (conf == null) return;
 
@@ -402,6 +402,7 @@ export default function Dashboard() {
     }));
   })();
 
+  // Use OVERALL SCORE for "Avg Score" in Performance by Category
   const performanceByCategoryScore = (() => {
     const categories = {
       full: { label: "Full", sum: 0, count: 0 },
@@ -440,22 +441,18 @@ export default function Dashboard() {
 
       if (!key) return;
 
-      const technicalScore = iv.feedback?.technical?.score;
-      const behavioralScore = iv.feedback?.behavioral?.score;
-      const codingScore = iv.feedback?.coding?.score;
+      const fb = iv.feedback || {};
 
-      const score =
-        typeof technicalScore === "number"
-          ? technicalScore
-          : typeof behavioralScore === "number"
-          ? behavioralScore
-          : typeof codingScore === "number"
-          ? codingScore
-          : null;
+      // Try to read "overall score" from feedback
+      let overall = null;
+      if (typeof fb.overall_score === "number") overall = fb.overall_score;
+      else if (typeof fb.overallScore === "number") overall = fb.overallScore;
+      else if (typeof fb.overall === "number") overall = fb.overall;
+      else if (typeof fb.overall?.score === "number") overall = fb.overall.score;
 
-      if (score == null) return;
+      if (overall == null) return;
 
-      categories[key].sum += score;
+      categories[key].sum += overall;
       categories[key].count += 1;
     });
 
@@ -464,6 +461,7 @@ export default function Dashboard() {
       value: c.count ? Math.round(c.sum / c.count) : 0,
     }));
   })();
+
 
   const performanceByCategoryData =
     categoryMetric === "confidence"
@@ -511,10 +509,10 @@ export default function Dashboard() {
 
   const lastActiveLabel = lastInterviewDate
     ? lastInterviewDate.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
     : "No interviews yet";
 
   const thisWeekInterviews = (() => {
@@ -561,9 +559,8 @@ export default function Dashboard() {
     return streak;
   })();
 
-  const currentStreakLabel = `${currentStreak} day${
-    currentStreak === 1 ? "" : "s"
-  }`;
+  const currentStreakLabel = `${currentStreak} day${currentStreak === 1 ? "" : "s"
+    }`;
 
   const confidenceTrendData = (() => {
     if (!interviews || interviews.length === 0) return [];
@@ -575,8 +572,8 @@ export default function Dashboard() {
           typeof iv.average_confidence === "number"
             ? iv.average_confidence
             : typeof iv.avg_confidence === "number"
-            ? iv.avg_confidence
-            : null;
+              ? iv.avg_confidence
+              : null;
         if (raw == null) return null;
         const d = new Date(iv.date);
         if (isNaN(d.getTime())) return null;
@@ -808,7 +805,7 @@ export default function Dashboard() {
       : null;
   const resumePreferred =
     Profile.preferredInterviewTypes &&
-    Profile.preferredInterviewTypes.length > 0
+      Profile.preferredInterviewTypes.length > 0
       ? Profile.preferredInterviewTypes
       : null;
 
@@ -1174,21 +1171,19 @@ export default function Dashboard() {
                     <div className="flex gap-1 rounded-lg bg-gray-100 dark:bg-gray-900 p-1">
                       <button
                         onClick={() => setCategoryMetric("confidence")}
-                        className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors ${
-                          categoryMetric === "confidence"
+                        className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors ${categoryMetric === "confidence"
                             ? "bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-300 shadow-sm"
                             : "text-gray-600 dark:text-gray-400"
-                        }`}
+                          }`}
                       >
                         Avg Confidence
                       </button>
                       <button
                         onClick={() => setCategoryMetric("score")}
-                        className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors ${
-                          categoryMetric === "score"
+                        className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors ${categoryMetric === "score"
                             ? "bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-300 shadow-sm"
                             : "text-gray-600 dark:text-gray-400"
-                        }`}
+                          }`}
                       >
                         Avg Score
                       </button>
@@ -1382,9 +1377,9 @@ export default function Dashboard() {
                         const progressPercent =
                           progress && progress.target > 0
                             ? Math.min(
-                                100,
-                                (progress.current / progress.target) * 100
-                              )
+                              100,
+                              (progress.current / progress.target) * 100
+                            )
                             : 0;
 
                         return (
@@ -1487,10 +1482,10 @@ export default function Dashboard() {
                             typeof technicalScore === "number"
                               ? technicalScore
                               : typeof behavioralScore === "number"
-                              ? behavioralScore
-                              : typeof codingScore === "number"
-                              ? codingScore
-                              : null;
+                                ? behavioralScore
+                                : typeof codingScore === "number"
+                                  ? codingScore
+                                  : null;
 
                           const isExpanded =
                             expandedInterviewId === interview._id;
@@ -1581,7 +1576,7 @@ export default function Dashboard() {
                                                 </span>{" "}
                                                 {formatDate(
                                                   details.date ||
-                                                    interview.date
+                                                  interview.date
                                                 )}
                                               </p>
                                               <p>
@@ -1589,11 +1584,11 @@ export default function Dashboard() {
                                                   Avg. Confidence:
                                                 </span>{" "}
                                                 {details.average_confidence !=
-                                                null
+                                                  null
                                                   ? `${(
-                                                      details.average_confidence *
-                                                      100
-                                                    ).toFixed(1)}%`
+                                                    details.average_confidence *
+                                                    100
+                                                  ).toFixed(1)}%`
                                                   : "--"}
                                               </p>
                                               <p>
@@ -1602,9 +1597,9 @@ export default function Dashboard() {
                                                 </span>{" "}
                                                 {details.average_focus != null
                                                   ? `${(
-                                                      details.average_focus *
-                                                      100
-                                                    ).toFixed(1)}%`
+                                                    details.average_focus *
+                                                    100
+                                                  ).toFixed(1)}%`
                                                   : "--"}
                                               </p>
                                             </div>
@@ -1640,16 +1635,16 @@ export default function Dashboard() {
                                               </p>
                                               {details.feedback?.technical
                                                 ?.summary && (
-                                                <p className="mt-1">
-                                                  <span className="font-medium">
-                                                    Technical summary:
-                                                  </span>{" "}
-                                                  {
-                                                    details.feedback.technical
-                                                      .summary
-                                                  }
-                                                </p>
-                                              )}
+                                                  <p className="mt-1">
+                                                    <span className="font-medium">
+                                                      Technical summary:
+                                                    </span>{" "}
+                                                    {
+                                                      details.feedback.technical
+                                                        .summary
+                                                    }
+                                                  </p>
+                                                )}
                                             </div>
 
                                             <button
@@ -1851,14 +1846,12 @@ export default function Dashboard() {
                       return (
                         <div
                           key={key}
-                          className={`w-7 h-7 rounded-md border border-gray-100 dark:border-gray-700 flex items-center justify-center text-xs ${
-                            count > 0
+                          className={`w-7 h-7 rounded-md border border-gray-100 dark:border-gray-700 flex items-center justify-center text-xs ${count > 0
                               ? getIntensityClass(count) + " text-white"
                               : "bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
-                          }`}
-                          title={`${count} interview${
-                            count === 1 ? "" : "s"
-                          } on ${labelDate}`}
+                            }`}
+                          title={`${count} interview${count === 1 ? "" : "s"
+                            } on ${labelDate}`}
                         >
                           {day.getDate()}
                         </div>
