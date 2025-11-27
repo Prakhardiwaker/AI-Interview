@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+// src/pages/FeedbackPage.jsx
+import React, { useEffect, useState } from "react";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   Download,
   Share2,
@@ -8,9 +10,33 @@ import {
   AlertCircle,
   CheckCircle,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
+import { getFeedback, getInterview } from "../lib/api";
+import {TranscriptView} from "../components/transcriptView"
 
-const FeedbackPage = ({ feedbackData = {} }) => {
+/**
+ * FeedbackPage
+ *
+ * Loads feedback either from:
+ *  - router state (location.state.feedback)  OR
+ *  - GET /api/interviews/:id  (if :id param present) OR
+ *  - GET /api/feedback (active session)
+ *
+ * Normalizes multiple possible backend shapes:
+ *  - payload.technical / payload.behavioral / payload.coding
+ *  - payload.feedback (an overall metrics object as in your example)
+ *  - transcript as array or string
+ */
+
+export default function FeedbackPage() {
+  const { id } = useParams(); // optional
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [expandedSection, setExpandedSection] = useState(null);
 
@@ -69,7 +95,13 @@ const FeedbackPage = ({ feedbackData = {} }) => {
     ],
   };
 
-  const data = { ...defaultFeedback, ...feedbackData };
+    // If router passed feedback object (immediate), use it
+    if (location.state?.feedback) {
+      const normalized = normalizeFeedbackResponse(location.state.feedback);
+      setData(normalized);
+      setLoading(false);
+      return;
+    }
 
   // SCORE CARD
   const ScoreCard = ({ label, score, color = "purple" }) => {
@@ -83,6 +115,74 @@ const FeedbackPage = ({ feedbackData = {} }) => {
       blue: "#0EA5E9",
     };
 
+    // transcript normalization
+    if (Array.isArray(p.transcript)) {
+      out.transcript = p.transcript.map((t) => {
+        // keep { question, answer } or try to map other shapes
+        if (typeof t === "string") return parseTranscriptStringSingle(t);
+        if (t.question && t.answer) return t;
+        // other shapes
+        const q = t.q || t.questionText || t.prompt || "";
+        const a = t.a || t.answerText || t.response || "";
+        return { question: q, answer: a };
+      });
+    } else if (typeof p.transcript === "string") {
+      out.transcript = parseTranscriptString(p.transcript);
+    } else if (p.history && Array.isArray(p.history)) {
+      out.transcript = p.history.map((h) => ({
+        question: h.question || h.q || "",
+        answer: h.answer || h.a || "",
+      }));
+    } else {
+      out.transcript = [];
+    }
+
+    return out;
+  }
+
+  function parseTranscriptString(txt) {
+    if (!txt) return [];
+    const lines = txt.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const arr = [];
+    let current = { question: "", answer: "" };
+    lines.forEach((line) => {
+      if (/^Q[:\s]/i.test(line)) {
+        if (current.question || current.answer) {
+          arr.push(current);
+          current = { question: "", answer: "" };
+        }
+        current.question = line.replace(/^Q[:\s]+/i, "").trim();
+      } else if (/^A[:\s]/i.test(line)) {
+        current.answer = line.replace(/^A[:\s]+/i, "").trim();
+      } else {
+        if (!current.question) current.question = line;
+        else if (!current.answer) current.answer = line;
+        else current.answer += " " + line;
+      }
+    });
+    if (current.question || current.answer) arr.push(current);
+    return arr;
+  }
+
+  function parseTranscriptStringSingle(str) {
+    const qMatch = str.match(/Q[:\s]*(.*?)\s*A[:\s]*(.*)/i);
+    if (qMatch) return { question: qMatch[1].trim(), answer: qMatch[2].trim() };
+    return { question: "", answer: str };
+  }
+
+  // ---------------- UI components ----------------
+  const Stat = ({ label, value, className }) => (
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
+      <p className="text-gray-600 dark:text-gray-400 text-sm">{label}</p>
+      <p className={`text-2xl mt-1 font-bold ${className || "text-gray-900 dark:text-white"}`}>{value}</p>
+    </div>
+  );
+
+  const ScoreCard = ({ label, score, color = "purple" }) => {
+    const percent = score != null ? Math.round(score) : null;
+    const circumference = 2 * Math.PI * 45;
+    const offset = percent != null ? circumference - (percent / 100) * circumference : circumference;
+    const colors = { purple: "#9333ea", blue: "#2563eb", green: "#10b981" };
     return (
       <div className="bg-gray-100 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-2xl p-6 text-center shadow-sm transition">
         <div className="relative w-32 h-32 mx-auto mb-4">
@@ -156,11 +256,25 @@ const FeedbackPage = ({ feedbackData = {} }) => {
           <div className="p-4 bg-white dark:bg-black/20 border-t border-gray-300 dark:border-white/20">
             {children}
           </div>
-        )}
+          <div>
+            <h4 className="font-semibold text-orange-600 dark:text-orange-400 mb-2">Areas to Improve</h4>
+            <ul className="space-y-2">
+              {areasToImprove.length ? areasToImprove.map((s,i)=>(<li key={i} className="text-gray-700 dark:text-gray-300">• {s}</li>)) : <li className="text-gray-500">No areas listed</li>}
+            </ul>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <h5 className="font-semibold text-blue-700 dark:text-blue-300 mb-2">Suggestions</h5>
+          <ul className="space-y-1">
+            {suggestions.length ? suggestions.map((s,idx)=>(<li key={idx} className="text-gray-800 dark:text-gray-300">{idx+1}. {s}</li>)) : <li className="text-gray-500">No suggestions</li>}
+          </ul>
+        </div>
       </div>
     );
   };
 
+  // ---------------- Render ----------------
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-purple-900 dark:to-gray-900 p-6 transition">
       {/* HEADER */}
@@ -184,8 +298,7 @@ const FeedbackPage = ({ feedbackData = {} }) => {
               <Share2 size={18} /> Share
             </button>
           </div>
-        </div>
-      </div>
+        )}
 
       {/* TABS */}
       <div className="max-w-6xl mx-auto mb-6 border-b border-gray-300 dark:border-white/20">
@@ -462,6 +575,12 @@ const FeedbackPage = ({ feedbackData = {} }) => {
       </div>
     </div>
   );
-};
+}
 
-export default FeedbackPage;
+// Small helper components reused (Stat, ScoreCard already defined above)
+const Stat = ({ label, value, className }) => (
+  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
+    <p className="text-gray-600 dark:text-gray-400 text-sm">{label}</p>
+    <p className={`text-2xl mt-1 font-bold ${className || "text-gray-900 dark:text-white"}`}>{value}</p>
+  </div>
+);

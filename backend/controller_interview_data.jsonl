@@ -1,0 +1,24 @@
+{
+  "instruction": "User answer: I handled conflicts by talking to my team.",
+  "response": "probe"
+}
+{
+  "instruction": "User answer: I led a team during my college project.",
+  "response": "probe"
+}
+{
+  "instruction": "User answer: My weakness is time management but I improved it.",
+  "response": "clarify"
+}
+{
+  "instruction": "User answer: I resolved a conflict between two teammates using mediation.",
+  "response": "next_topic"
+}
+{
+  "instruction": "User answer: I have good leadership skills.",
+  "response": "example"
+}
+{
+  "instruction": "User answer: I prefer working independently.",
+  "response": "behavior_check"
+}

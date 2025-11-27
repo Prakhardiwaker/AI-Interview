@@ -88,22 +88,23 @@ async def setup_session(
 
     resume = {
         "name": user_data.get("name", ""),
-        "email": user_data.get("email", ""),
-        "phone": user_data.get("phone", ""),
         "skills": user_data.get("skills", []),
         "projects": user_data.get("projects", []),
-        "experience": user_data.get("experience", [])
+        "experience": user_data.get("experience", []),
+        "education": user_data.get("education", []),
+        "targetCompanies": user_data.get("targetCompanies", [])
     }
 
     # Convert to structured text
     resume_text = "\n".join([
         f"Name: {resume.get('name')}",
-        f"Email: {resume.get('email')}",
-        f"Phone: {resume.get('phone')}",
-        "Skills: " + ", ".join(resume.get('skills', [])),
+        "Skills: " + ", ".join(resume.get("skills", [])),
         "Projects: " + ", ".join(resume.get("projects", [])),
-        "Experience: " + ", ".join(resume.get("experience", []))
+        "Experience: " + ", ".join(resume.get("experience", [])),
+        "Education: " + ", ".join(resume.get("education", [])),
+        "Target Companies: " + ", ".join(resume.get("targetCompanies", []))
     ])
+
 
     # Duration to rounds mapping
     duration_to_rounds = {
@@ -189,6 +190,7 @@ async def handle_audio(audio: UploadFile = File(...), focus_score: Optional[floa
         os.remove(tmp_path)
         # Return initial question instead of transcribing
         session = user_sessions[user]
+        
         first_question = session.ask_question()
         return {"text": first_question, "answer": "", "confidence": 0.0}
 

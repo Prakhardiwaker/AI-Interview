@@ -1,4 +1,4 @@
-// src/lib/api.js - Updated version with duration support and backend sync
+// src/lib/api.js
 import axios from "axios";
 
 const API_BASE_URL =
@@ -23,9 +23,13 @@ const api = axios.create({
 // Utility: Attach Bearer token if available
 const applyAuthToken = async (headers = {}) => {
   if (getTokenFunction) {
-    const token = await getTokenFunction();
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+    try {
+      const token = await getTokenFunction();
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+    } catch (e) {
+      console.warn("applyAuthToken: failed to get token", e);
     }
   }
   return headers;
@@ -139,26 +143,20 @@ export const storage = {
 
 // ---------- Interview Setup ----------
 export const setupInterview = async (data) => {
-  console.log("📤 setupInterview() called with:", data);
-
-
-
-
   // Get token manually from Clerk
   const headers = await applyAuthToken();
 
-  // ❗️Do NOT set Content-Type manually, or FormData breaks
+  // Do NOT set Content-Type manually when using FormData on server side
   const response = await api.post(
     "/api/setup",
     {
       role: data.role,
       interview_type: data.interviewType,
-      duration: data.duration
+      duration: data.duration,
     },
     { headers }
   );
 
-  console.log("✅ Setup response:", response.data);
   return response.data;
 };
 
@@ -205,7 +203,12 @@ export const sendCodeExplanation = async (audioBlob) => {
 export const getInterviewFeedback = async () => {
   const headers = await applyAuthToken();
   const response = await api.get("/api/feedback", { headers });
-  storage.clearCurrentSession();
+  // backend may clear session; keep local storage clear consistent with backend
+  try {
+    storage.clearCurrentSession();
+  } catch (e) {
+    // ignore
+  }
   return response.data;
 };
 export const getFeedback = getInterviewFeedback;
@@ -214,6 +217,7 @@ export const getFeedback = getInterviewFeedback;
 export const getInterviewHistory = async () => {
   const headers = await applyAuthToken();
   const response = await api.get("/api/interviews", { headers });
+  // return as-is; backend should ensure _id is string and fields present
   return response.data;
 };
 
